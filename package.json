@@ -1,0 +1,15 @@
+{
+  "name": "rabbit-store",
+  "version": "0.1.0",
+  "main": "src/Store.js",
+  "repository": "https://github.com/rabbitmeow/rabbit-store.git",
+  "author": "rabbit <rabbitmeow886@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "babel-preset-env": "^1.7.0",
+    "jest": "^23.6.0"
+  }
+}
