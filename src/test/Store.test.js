@@ -114,11 +114,6 @@ describe('Store', () => {
     }).not.toThrow()
     
     expect(() => {
-      const s = new Store(profile, () => undefined)
-      s.getUpdaters().update({name: 'rabbit'})
-    }).not.toThrow()
-
-    expect(() => {
       const s = new Store(profile, () => false)
       s.getUpdaters().update({name: 'rabbit'})
     }).not.toThrow()
@@ -142,13 +137,7 @@ describe('Store', () => {
     
     expect(() => {
       const s = new Store(profile, (subState, state) => {
-        const ret = {}
-        for (const key in subState) {
-          if (!(key in state)) {
-            return
-          }
-        }
-        return subState
+        return Object.keys(subState).every(key => key in state) && subState
       })
       s.getUpdaters().update({name: 'older name'})
       s.getUpdaters().update({name: 'newer name', shouldNotBeAssigned: 'error'})

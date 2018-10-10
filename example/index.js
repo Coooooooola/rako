@@ -1,11 +1,22 @@
 import Store from 'rabbit-store'
 
 function profile(update) {
+  const pattern = {
+    name: name => /^\w+$/.test(name),
+    random: num => !isNaN(num)
+  }
+
   return {
     name: 'rabbit',
     random: Math.random(),
     updateRandom() {
       update({random: Math.random()})
+    },
+    update(state) {
+      const isValid = Object.keys(state).every(key => !(key in pattern) || pattern[key](state[key]))
+      if (isValid) {
+        update(state)
+      }
     }
   }
 }
@@ -22,8 +33,7 @@ function contact(update) {
 
 
 const store = new Store({profile, inner: {contact}}, (subState, state) => {
-  const isValid = Object.keys(subState).every(key => key in state)
-  return isValid && subState
+  return Object.keys(subState).every(key => key in state) && subState
 })
 const updaters = store.getUpdaters()
 

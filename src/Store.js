@@ -21,6 +21,7 @@ function unsubscribe(listener) {
 
 function _update(state) {
   if (this[$$status] === READONLY) {
+    this[$$status] = FREE
     throw new Error('Runtime Error: You cannot update state in listeners.')
   } else if (this[$$status] === OPTIMIZE) {
     this[$$isDirty] = true
@@ -39,11 +40,11 @@ function update(state) {
   }
   if (this[$$beforeUpdate]) {
     state = this[$$beforeUpdate](state, this.getState())
-    if (state === undefined || state === false) {
+    if (state === false) {
       return
     }
-    if (state === null || typeof state !== 'object') {
-      throw new TypeError('Return type of Store beforeUpdate: type is invalid -- expected an object but got: ' + (state === null ? state : typeof state) + '.')
+    if (state == null || typeof state !== 'object') {
+      throw new TypeError('Return type of Store beforeUpdate: type is invalid -- expected an object or false but got: ' + (state == null ? state : typeof state) + '.')
     }
   }
   _update.call(this, state)
@@ -54,8 +55,10 @@ function optimize(optimizer) {
     throw new TypeError('Store updaters.optimize: type is invalid -- expected a function but got:' + (optimizer == null ? optimizer : typeof optimizer) + '.')
   }
   if (this[$$status] === READONLY) {
+    this[$$status] = FREE
     throw new Error('Runtime Error: You cannot run updaters.optimize to update state in listeners.')
   } else if (this[$$status] === OPTIMIZE) {
+    this[$$status] = FREE
     throw new Error('Runtime Error: You have already in optimize mode, avoid to rerun it.')
   }
   this[$$status] = OPTIMIZE
@@ -64,8 +67,12 @@ function optimize(optimizer) {
   optimizer(this[$$pureUpdaters], this.getState())
   if (this[$$isDirty]) {
     this[$$state] = Object.freeze(Object.assign({}, this.getState(), this[$$newState]))
+    this[$$status] = READONLY
     this[$$listeners].forEach(listener => listener(this.getState()))
+    this[$$status] = FREE
   } else {
+    this[$$newState] = null
+    this[$$status] = FREE
     throw new Error('Runtime Error: You have not updated state, maybe you invoid update in async function, avoid to use optimize in this case.')
   }
   this[$$newState] = null
