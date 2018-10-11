@@ -35,15 +35,15 @@ function contact(update) {
 const store = new Store({profile, inner: {contact}}, (subState, state) => {
   return Object.keys(subState).every(key => key in state) && subState
 })
-const updaters = store.getUpdaters()
+const updater = store.getUpdater()
 
 store.subscribe(state => console.log('subscribe', state))
 
-const {$profile, $inner: {$contact}} = updaters
+const {$profile, $inner: {$contact}} = updater
 $profile.updateRandom()
 $contact.increase()
 
-updaters.optimize(({$profile, $inner: {$contact}}, state) => {
+updater.optimize(({$profile, $inner: {$contact}}, state) => {
   $profile.updateRandom()
   $contact.increase()
 })

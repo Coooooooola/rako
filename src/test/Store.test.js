@@ -7,7 +7,8 @@ describe('Store', () => {
       age: 21,
       getOlder() {
         update({name: 'older ' + this.name, age: this.age + 1})
-      }
+      },
+      update
     }
   }
   function contact(update) {
@@ -19,7 +20,8 @@ describe('Store', () => {
         update({inc: this.inc + 1})
         update({phone: 911})
         update({inc: this.inc + 100})
-      }
+      },
+      update
     }
   }
   let store1 = null
@@ -39,9 +41,9 @@ describe('Store', () => {
     store2 = new Store({profile, contact})
     store3 = new Store({profile, inner: {contact}})
 
-    actions1 = store1.getUpdaters()
-    actions2 = store2.getUpdaters()
-    actions3 = store3.getUpdaters()
+    actions1 = store1.getUpdater()
+    actions2 = store2.getUpdater()
+    actions3 = store3.getUpdater()
 
     listener1 = jest.fn()
     listener2 = jest.fn()
@@ -74,22 +76,22 @@ describe('Store', () => {
 
     expect(() => {
       const s = new Store(profile, () => null)
-      s.getUpdaters().update({})
+      s.getUpdater().update({})
     }).toThrowError('beforeUpdate')
 
     expect(() => {
       const s = new Store(profile, () => 1)
-      s.getUpdaters().update({name: 'rabbit'})
+      s.getUpdater().update({name: 'rabbit'})
     }).toThrowError('beforeUpdate')
 
     expect(() => {
       const s = new Store(profile, () => '')
-      s.getUpdaters().update({name: 'rabbit'})
+      s.getUpdater().update({name: 'rabbit'})
     }).toThrowError('beforeUpdate')
     
     expect(() => {
       const s = new Store(profile, () => 0)
-      s.getUpdaters().update({name: 'rabbit'})
+      s.getUpdater().update({name: 'rabbit'})
     }).toThrowError('beforeUpdate')
   })
 
@@ -110,17 +112,17 @@ describe('Store', () => {
 
     expect(() => {
       const s = new Store(profile, (subState, state) => subState)
-      s.getUpdaters().update({name: 'rabbit'})
+      s.getUpdater().update({name: 'rabbit'})
     }).not.toThrow()
     
     expect(() => {
       const s = new Store(profile, () => false)
-      s.getUpdaters().update({name: 'rabbit'})
+      s.getUpdater().update({name: 'rabbit'})
     }).not.toThrow()
 
     expect(() => {
       const s = new Store(profile, (_, state) => state)
-      s.getUpdaters().update({name: 'rabbit'})
+      s.getUpdater().update({name: 'rabbit'})
     }).not.toThrow()
 
     expect(() => {
@@ -130,7 +132,7 @@ describe('Store', () => {
         })
         return subState
       })
-      s.getUpdaters().update({name: 'rabbitoops'})
+      s.getUpdater().update({name: 'rabbitoops'})
 
       expect(s.getState()).toEqual({name: 'RABBITOOPS', age: 21})
     }).not.toThrow()
@@ -139,14 +141,14 @@ describe('Store', () => {
       const s = new Store(profile, (subState, state) => {
         return Object.keys(subState).every(key => key in state) && subState
       })
-      s.getUpdaters().update({name: 'older name'})
-      s.getUpdaters().update({name: 'newer name', shouldNotBeAssigned: 'error'})
+      s.getUpdater().update({name: 'older name'})
+      s.getUpdater().update({name: 'newer name', shouldNotBeAssigned: 'error'})
 
       expect(s.getState()).toEqual({name: 'older name', age: 21})
     }).not.toThrow()
   })
 
-  it('store.getUpdaters()', () => {
+  it('store.getUpdater()', () => {
     const profileActions = {
       getOlder: expect.any(Function),
       update: expect.any(Function)
@@ -175,7 +177,7 @@ describe('Store', () => {
     expect(store3.getState()).toEqual({profile: profileState, inner: {contact: contactState}})
   })
 
-  it('Updaters update', () => {
+  it('Updater update', () => {
     actions1.update({name: 'oops'})
     actions1.getOlder()
     expect(listener1.mock.calls).toEqual([[{name: 'oops', age: 21}], [{name: 'older oops', age: 22}]])
@@ -233,34 +235,34 @@ describe('Store', () => {
     expect(s.getState()).toEqual({profile: {name: 'rabbit', age: 21}})
     expect(s.getState().profile).toBe(parent.getState())
 
-    s.getUpdaters().$profile.update({name: 'yes!'})
+    s.getUpdater().$profile.update({name: 'yes!'})
     expect(s.getState()).toEqual({profile: {name: 'yes!', age: 21}})
     expect(s.getState().profile).toBe(parent.getState())
   })
 
   it('Right way to optimize', () => {
-    actions2.optimize((updaters, state) => {
-      expect(updaters).toEqual({$profile: {getOlder: expect.any(Function), update: expect.any(Function)}, $contact: {updateAll: expect.any(Function), update: expect.any(Function)}})
+    actions2.optimize((updater, state) => {
+      expect(updater).toEqual({$profile: {getOlder: expect.any(Function), update: expect.any(Function)}, $contact: {updateAll: expect.any(Function), update: expect.any(Function)}})
       expect(state).toEqual({profile: {name: 'rabbit', age: 21}, contact: {phone: 12345, email: 'rabbitmeow886@gmail.com', inc: 1}})
 
-      updaters.$profile.getOlder()
-      updaters.$profile.getOlder()
-      updaters.$profile.getOlder()
-      updaters.$profile.getOlder()
+      updater.$profile.getOlder()
+      updater.$profile.getOlder()
+      updater.$profile.getOlder()
+      updater.$profile.getOlder()
 
-      updaters.$contact.updateAll()
-      updaters.$contact.update({email: 'meow!'})
+      updater.$contact.updateAll()
+      updater.$contact.update({email: 'meow!'})
     })
     const res1 = {profile: {name: 'older older older older rabbit', age: 25}, contact: {phone: 911, email: 'meow!', inc: 101}}
     expect(store2.getState()).toEqual(res1)
-    actions2.optimize((updaters, state) => {
+    actions2.optimize((updater, state) => {
       expect(state).toEqual(res1)
 
-      updaters.$profile.getOlder()
-      updaters.$profile.getOlder()
+      updater.$profile.getOlder()
+      updater.$profile.getOlder()
 
-      updaters.$contact.updateAll()
-      updaters.$contact.update({email: 'yes'})
+      updater.$contact.updateAll()
+      updater.$contact.update({email: 'yes'})
     })
     const res2 = {profile: {name: 'older older older older older older rabbit', age: 27}, contact: {phone: 911, email: 'yes', inc: 201}}
     expect(store2.getState()).toEqual(res2)
@@ -271,71 +273,71 @@ describe('Store', () => {
   it('Wrong way to optimize', () => {
     expect(() => {
       const store = new Store({profile, contact})
-      const updaters = store.getUpdaters()
-      updaters.optimize(() => {})
+      const updater = store.getUpdater()
+      updater.optimize(() => {})
     }).toThrowError('Runtime Error: You have not updated state')
 
     expect(() => {
       const store = new Store({profile, contact})
-      const updaters = store.getUpdaters()
-      updaters.optimize()
-    }).toThrowError('Store updaters.optimize: type is invalid')
+      const updater = store.getUpdater()
+      updater.optimize()
+    }).toThrowError('Store updater.optimize: type is invalid')
 
     expect(() => {
       const store = new Store({profile, contact})
-      const updaters = store.getUpdaters()
-      updaters.optimize(undefined)
-    }).toThrowError('Store updaters.optimize: type is invalid')
+      const updater = store.getUpdater()
+      updater.optimize(undefined)
+    }).toThrowError('Store updater.optimize: type is invalid')
 
     expect(() => {
       const store = new Store({profile, contact})
-      const updaters = store.getUpdaters()
-      updaters.optimize(null)
-    }).toThrowError('Store updaters.optimize: type is invalid')
+      const updater = store.getUpdater()
+      updater.optimize(null)
+    }).toThrowError('Store updater.optimize: type is invalid')
 
     expect(() => {
       const store = new Store({profile, contact})
-      const updaters = store.getUpdaters()
-      updaters.optimize(0)
-    }).toThrowError('Store updaters.optimize: type is invalid')
+      const updater = store.getUpdater()
+      updater.optimize(0)
+    }).toThrowError('Store updater.optimize: type is invalid')
 
     expect(() => {
       const store = new Store({profile, contact})
-      const updaters = store.getUpdaters()
-      updaters.optimize({})
-    }).toThrowError('Store updaters.optimize: type is invalid')
+      const updater = store.getUpdater()
+      updater.optimize({})
+    }).toThrowError('Store updater.optimize: type is invalid')
 
 
     expect(() => {
       const store = new Store({profile, contact})
-      const updaters = store.getUpdaters()
-      updaters.optimize((_, state) => {
-        updaters.optimize(() => {})
+      const updater = store.getUpdater()
+      updater.optimize((_, state) => {
+        updater.optimize(() => {})
       })
     }).toThrowError('Runtime Error: You have already in optimize mode, avoid to rerun it.')
 
     expect(() => {
       const store = new Store({profile, contact})
-      const updaters = store.getUpdaters()
+      const updater = store.getUpdater()
       store.subscribe(() => {
-        updaters.optimize((_, state) => {})
+        updater.optimize((_, state) => {})
       })
-      updaters.$profile.update({})
-    }).toThrowError('Runtime Error: You cannot run updaters.optimize to update state in listeners.')
+      updater.$profile.update({})
+    }).toThrowError('Runtime Error: You cannot run updater.optimize to update state in listeners.')
   })
 
   it('Listeners', () => {
     const anotherListener1 = jest.fn()
     store1.subscribe(anotherListener1)
-    store1.getUpdaters().update({})
-    store1.getUpdaters().update({})
-    store1.getUpdaters().update({})
+    store1.getUpdater().update({})
+    store1.getUpdater().update({})
+    store1.getUpdater().update({})
     expect(listener1.mock.calls.length).toBe(3)
     expect(anotherListener1.mock.calls.length).toBe(3)
     
-    const actionWhenInListen = jest.fn(() => store1.getUpdaters().update({name: 'meow'}))
+    const actionWhenInListen = jest.fn(() => store1.getUpdater().update({name: 'meow'}))
     store1.subscribe(actionWhenInListen)
-    expect(() => store1.getUpdaters().update({age: 18})).toThrowError('Runtime Error: You cannot update state in listeners.')
+    expect(() => store1.getUpdater().update({age: 18})).toThrowError('Runtime Error: You cannot update state in listeners.')
 
     expect(() => store1.subscribe()).toThrowError('store.subscribe: type is invalid')
     expect(() => store1.subscribe(null)).toThrowError('store.subscribe: type is invalid')
