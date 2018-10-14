@@ -1,6 +1,6 @@
 {
   "name": "rabbit-store",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "main": "src/Store.js",
   "repository": "https://github.com/rabbitmeow/rabbit-store.git",
   "author": "rabbit <rabbitmeow886@gmail.com>",
