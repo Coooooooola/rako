@@ -4,6 +4,10 @@
 
 `yarn add rako` or `npm install rako`.
 
+Work with react: `rako-react`.
+
+`rako-react` github: https://github.com/rabbitmeow/rako-react
+
 
 ## API
 
