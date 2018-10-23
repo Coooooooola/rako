@@ -63,4 +63,4 @@ profile$.subscribe(console.log)
 profile$.getUpdater().updateName('big rabbit')
 ````
 
-demo link: https://github.com/rabbitmeow/rako-react-demo
+demo link: https://codesandbox.io/s/011136qpkn
