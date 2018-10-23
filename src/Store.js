@@ -1,143 +1,129 @@
-const $$updater = Symbol ? Symbol('updater') : '(updater)-rabbit-2333'
-const $$pureUpdater = Symbol ? Symbol('pure-updater') : '(pure-updater)-rabbit-2334'
-const $$state = Symbol ? Symbol('state') : '(state)-rabbit-2335'
-const $$newState = Symbol ? Symbol('new-state') : '(new-state)-rabbit-2336'
+function compose(...funcs) {
+  return funcs.reduce((a, b) => arg => a(b(arg)))
+}
 
-const $$listeners = Symbol ? Symbol('listeners') : '(listeners)-rabbit-2337'
-const $$beforeUpdate = Symbol ? Symbol('beforeUpdate') : '(beforeUpdate)-rabbit-2338'
-
-const $$status = Symbol ? Symbol('status') : '(status)-rabbit-2339'
-const FREE = 0, READONLY = 1, OPTIMIZE = 2
-
-const $$isDirty = Symbol ? Symbol('is-dirty') : '(is-dirty)-rabbit-233A'
+function applyMiddleware(...middlewares) {
+  return (getState, update) => {
+    let _update = () => {
+      throw new Error('Updating while constructing your middleware is not allowed.')
+    }
+    const closureUpdate = (...args) => _update(...args)
+    const chain = middlewares.map(middleware => middleware(getState, closureUpdate))
+    _update = compose(...chain)(update)
+    return _update
+  }
+}
 
 function unsubscribe(listener) {
-  const index = this[$$listeners].indexOf(listener)
+  if (this.isUpdating) {
+    throw new Error('You cannot unsubscribe as updating.')
+  }
+  const index = this.listeners.indexOf(listener)
   if (index !== -1) {
-    this[$$listeners].splice(index, 1)
+    this.listeners.splice(index, 1)
     return listener
   }
 }
 
-function _update(state) {
-  if (this[$$status] === READONLY) {
-    this[$$status] = FREE
-    throw new Error('Runtime Error: You cannot update state in listeners.')
-  } else if (this[$$status] === OPTIMIZE) {
-    this[$$isDirty] = true
-    this[$$newState] = Object.assign(this[$$newState], state)
-    return
-  }
-  this[$$state] = Object.freeze(Object.assign({}, this.getState(), state))
-  this[$$status] = READONLY
-  this[$$listeners].forEach(listener => listener(this.getState()))
-  this[$$status] = FREE
-}
-
 function update(state) {
-  if (state == null || typeof state !== 'object') {
-    throw new TypeError('Store update: type is invalid -- expected an object but got: ' + (state == null ? state : typeof state) + '.')
+  if (typeof state !== 'object') {
+    throw new TypeError('Expected state to be an object.')
   }
-  if ($$beforeUpdate in this) {
-    state = this[$$beforeUpdate](state, this.getState())
-    if (state === false) {
-      return
-    }
-    if (state == null || typeof state !== 'object') {
-      throw new TypeError('Return type of Store beforeUpdate: type is invalid -- expected an object or false but got: ' + (state == null ? state : typeof state) + '.')
-    }
-  }
-  _update.call(this, state)
-}
-
-function optimize(optimizer) {
-  if (typeof optimizer !== 'function') {
-    throw new TypeError('Store updater.optimize: type is invalid -- expected a function but got:' + (optimizer == null ? optimizer : typeof optimizer) + '.')
-  }
-  if (this[$$status] === READONLY) {
-    this[$$status] = FREE
-    throw new Error('Runtime Error: You cannot run updater.optimize to update state in listeners.')
-  } else if (this[$$status] === OPTIMIZE) {
-    this[$$status] = FREE
-    throw new Error('Runtime Error: You have already in optimize mode, avoid to rerun it.')
-  }
-  this[$$status] = OPTIMIZE
-  this[$$isDirty] = false
-  this[$$newState] = {}
-  optimizer(this[$$pureUpdater], this.getState())
-  if (this[$$isDirty]) {
-    this[$$state] = Object.freeze(Object.assign({}, this.getState(), this[$$newState]))
-    this[$$status] = READONLY
-    this[$$listeners].forEach(listener => listener(this.getState()))
-    this[$$status] = FREE
-  } else {
-    this[$$newState] = null
-    this[$$status] = FREE
-    throw new Error('Runtime Error: You have not updated state, maybe you invoid update in async function, avoid to use optimize in this case.')
-  }
-  this[$$newState] = null
-  this[$$status] = FREE
+  this.state = Object.freeze(Object.assign({}, this.state, state))
+  this.isUpdating = true
+  this.listeners.forEach(listener => listener(this.state))
+  this.isUpdating = false
 }
 
 class Store {
-  constructor(providers, beforeUpdate) {
-    const typeofProvidiers = typeof providers
-    if (providers == null || typeofProvidiers !== 'function' && typeofProvidiers !== 'object') {
-      throw new TypeError('Store: type is invalid -- expected an object or function but got: ' + (providers == null ? providers : typeofProvidiers) + '.')
+  constructor(descriptor, middleware) {
+    if (typeof descriptor !== 'function') {
+      throw new TypeError('Expected descriptor to be a function.')
     }
-    if (beforeUpdate !== undefined && typeof beforeUpdate !== 'function') {
-      throw new TypeError('Store: type is invalid -- expected an object or function but got: ' + (beforeUpdate == null ? beforeUpdate : beforeUpdate) + '.')
+    if (middleware !== undefined && typeof middleware !== 'function') {
+      throw new TypeError('Expected middleware to be a function.')
     }
-    if (beforeUpdate) {
-      this[$$beforeUpdate] = beforeUpdate
-    }
-    const updater = {}
     const state = {}
-    if (typeofProvidiers === 'function') {
-      const result = providers(update.bind(this))
-      if (result == null || typeof result !== 'object') {
-        throw new TypeError('Return of providers: type is invalid -- expected an object but got: ' + (result == null ? result : typeof result) + '.')
-      }
-      Object.keys(result).forEach(key => {
-        const value = result[key]
-        if (typeof value === 'function') {
-          updater[key] = (...args) => value.apply(this.getState(), args)
-        } else {
-          state[key] = value
-        }
-      })
-    } else {
-      const keys = Object.keys(providers)
-      if (!keys.length) {
-        throw new Error('Runtime Error: Providers not found in object as initializing Store.')
-      }
-      keys.forEach(key => {
-        const store = providers[key] instanceof Store ? providers[key] : new Store(providers[key], beforeUpdate)
-        store.subscribe(_state => _update.call(this, {[key]: _state}))
-        updater[`$${key}`] = store.getUpdater()
-        state[key] = store.getState()
-      })
-      this[$$pureUpdater] = Object.freeze(Object.assign({}, updater))
-      updater.optimize = optimize.bind(this)
+    const updater = {}
+    const _private = {
+      state,
+      updater,
+      listeners: [],
+      isUpdating: false
     }
-    this[$$updater] = Object.freeze(updater)
-    this[$$state] = Object.freeze(state)
-    this[$$status] = FREE
-    this[$$listeners] = []
+    this.getState = this.getState.bind(_private)
+    this.getUpdater = this.getUpdater.bind(_private)
+    this.subscribe = this.subscribe.bind(_private)
+    const result = descriptor(middleware ? middleware(this.getState, update.bind(_private)) : update.bind(_private))
+    if (result == null || typeof result !== 'object') {
+      throw new TypeError('Expected return value from descriptor to be an object.')
+    }
+    Object.keys(result).forEach(key => {
+      const value = result[key]
+      if (typeof value === 'function') {
+        updater[key] = (...args) => value.apply(_private.state, args)
+      } else {
+        state[key] = value
+      }
+    })
+    Object.freeze(state)
+    Object.freeze(updater)
   }
   getState() {
-    return this[$$state]
+    return this.state
   }
   getUpdater() {
-    return this[$$updater]
+    return this.updater
   }
   subscribe(listener) {
-    if (typeof listener !== 'function') {
-      throw new TypeError('store.subscribe: type is invalid -- expected a function but got: ' + (listener == null ? listener : typeof listener))
+    if (this.isUpdating) {
+      throw new Error('You cannot subscribe as updating.')
     }
-    this[$$listeners].push(listener)
+    if (typeof listener !== 'function') {
+      throw new TypeError('Expected listener to be a function.')
+    }
+    this.listeners.push(listener)
     return unsubscribe.bind(this, listener)
   }
 }
 
+
+// createStores, applyEnhancer APIs are unstable now, because I'm not sure if it's the best solution for solving such problem.
+function applyEnhancer(...enhancers) {
+  return enhancers.map(enhancer => enhancer()).reduce((_, {
+    controller,
+    nakedMiddleware
+  }) => {
+    if (typeof nakedMiddleware !== 'function') {
+      throw new TypeError('Expected nakedMiddleware to be a function.')
+    }
+    _.nakedMiddlewares.push(nakedMiddleware)
+    Object.assign(_.controller, controller)
+    return _
+  }, {
+    nakedMiddlewares: [],
+    controller: {}
+  })
+}
+
+// createStores, applyEnhancer APIs are unstable now, because I'm not sure if it's the best solution for solving such problem.
+function createStores(descriptors, nakedMiddlewares) {
+  if (descriptors == null || typeof descriptors !== 'object') {
+    throw new TypeError('Expected descriptors to be an object.')
+  }
+  if (nakedMiddlewares !== undefined && !Array.isArray(nakedMiddlewares)) {
+    throw new TypeError('Expected nakedMiddlewares to be an array.')
+  }
+  return Object.keys(descriptors).map(key => {
+    const middleware = nakedMiddlewares && applyMiddleware(...nakedMiddlewares.map(nakedMiddleware => nakedMiddleware(key)))
+    return new Store(descriptors[key], middleware)
+  })
+}
+
+
+export {
+  applyMiddleware,
+  applyEnhancer,
+  createStores
+}
 export default Store
