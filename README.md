@@ -6,7 +6,7 @@
 
 Work with react: `rako-react`.
 
-`rako-react` github: https://github.com/rabbitmeow/rako-react
+`rako-react` github: https://github.com/rabbitooops/rako-react
 
 
 ## API
@@ -38,7 +38,7 @@ function profile(update) {
   }
 }
 
-function bankAccount(update) {
+function bank(update) {
   const calcBalance = (money, balance) => balance + money
   return {
     balance: 50,
@@ -61,7 +61,7 @@ function bankAccount(update) {
   }
 }
 
-const [profile$, bankAccount$] = createStores({profile, bankAccount})
+const {profile$, bank$} = createStores({profile, bank})
 
 profile$.subscribe(console.log)
 profile$.getUpdater().updateGender('female')
