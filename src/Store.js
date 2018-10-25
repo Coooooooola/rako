@@ -1,4 +1,4 @@
-function compose(...funcs) {
+function compose(funcs) {
   return funcs.reduce((a, b) => arg => a(b(arg)))
 }
 
@@ -7,9 +7,9 @@ function applyMiddleware(...middlewares) {
     let _update = () => {
       throw new Error('Updating while constructing your middleware is not allowed.')
     }
-    const closureUpdate = (...args) => _update(...args)
+    const closureUpdate = arg => _update(arg)
     const chain = middlewares.map(middleware => middleware(getState, closureUpdate))
-    _update = compose(...chain)(update)
+    _update = compose(chain)(update)
     return _update
   }
 }
@@ -87,43 +87,19 @@ class Store {
   }
 }
 
-
-// createStores, applyEnhancer APIs are unstable now, because I'm not sure if it's the best solution for solving such problem.
-function applyEnhancer(...enhancers) {
-  return enhancers.map(enhancer => enhancer()).reduce((_, {
-    controller,
-    nakedMiddleware
-  }) => {
-    if (typeof nakedMiddleware !== 'function') {
-      throw new TypeError('Expected nakedMiddleware to be a function.')
-    }
-    _.nakedMiddlewares.push(nakedMiddleware)
-    Object.assign(_.controller, controller)
-    return _
-  }, {
-    nakedMiddlewares: [],
-    controller: {}
-  })
-}
-
-// createStores, applyEnhancer APIs are unstable now, because I'm not sure if it's the best solution for solving such problem.
-function createStores(descriptors, nakedMiddlewares) {
+function createStores(descriptors, ...enhancers) {
   if (descriptors == null || typeof descriptors !== 'object') {
     throw new TypeError('Expected descriptors to be an object.')
   }
-  if (nakedMiddlewares !== undefined && !Array.isArray(nakedMiddlewares)) {
-    throw new TypeError('Expected nakedMiddlewares to be an array.')
-  }
-  return Object.keys(descriptors).map(key => {
-    const middleware = nakedMiddlewares && applyMiddleware(...nakedMiddlewares.map(nakedMiddleware => nakedMiddleware(key)))
-    return new Store(descriptors[key], middleware)
+  const stores = Object.keys(descriptors).map(key => {
+    const middleware = enhancers.length ? applyMiddleware(...enhancers.map(enhancer => enhancer(key))) : undefined
+    return {[`${key}$`]: new Store(descriptors[key], middleware)}
   })
+  return Object.assign({}, ...stores)
 }
-
 
 export {
   applyMiddleware,
-  applyEnhancer,
   createStores
 }
 export default Store

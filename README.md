@@ -13,7 +13,7 @@ Work with react: `rako-react`.
 
 ### `new Store(descriptor: function, middleware: function?)`
 
-### `createStores(stores: object)`
+### `createStores(descriptors: object)`
 
 ### `store.getState()`
 
@@ -27,7 +27,7 @@ Work with react: `rako-react`.
 ````js
 function profile(update) {
   return {
-    name: 'rabbit',
+    name: 'rako',
     gender: 'male',
     updateName(name) {
       update({name})
@@ -64,7 +64,7 @@ function bankAccount(update) {
 const [profile$, bankAccount$] = createStores({profile, bankAccount})
 
 profile$.subscribe(console.log)
-profile$.getUpdater().updateName('big rabbit')
+profile$.getUpdater().updateGender('female')
 ````
 
-demo link: https://codesandbox.io/s/011136qpkn
+example link: https://codesandbox.io/s/011136qpkn
