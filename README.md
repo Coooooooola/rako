@@ -1,6 +1,6 @@
 # rako
 
-## introduction
+## Introduction
 
 `rako` is a declarative state container for Javascript apps.
 
