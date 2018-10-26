@@ -1,5 +1,12 @@
 # rako
 
+## introduction
+
+`rako` is a declarative state container for Javascript apps.
+
+You don't need to learn any concept, just use it. Really simple but powerful.
+
+
 ## Installation
 
 `yarn add rako` or `npm install rako`.
