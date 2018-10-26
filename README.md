@@ -11,15 +11,16 @@ Work with react: `rako-react`.
 
 ## API
 
-### `new Store(descriptor: function, middleware: function?)`
+#### `new Store(descriptor: function)`
+- ##### `descriptor(update): object`
 
-### `createStores(descriptors: object)`
+#### `createStores(descriptors: object): object`
 
-### `store.getState()`
+#### `store.getState(): object`
 
-### `store.getUpdater()`
+#### `store.getUpdater(): object`
 
-### `store.subscribe(listener: function)`
+#### `store.subscribe(listener: function): function`
 
 
 ## Demo
