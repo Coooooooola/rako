@@ -5,7 +5,7 @@ function compose(funcs) {
 function applyMiddleware(...middlewares) {
   return (getState, update) => {
     let _update = () => {
-      throw new Error('Updating while constructing your middleware is not allowed.')
+      throw new Error('Updating while constructing middleware is not allowed.')
     }
     const closureUpdate = arg => _update(arg)
     const chain = middlewares.map(middleware => middleware(getState, closureUpdate))
@@ -26,7 +26,10 @@ function unsubscribe(listener) {
 }
 
 function update(state) {
-  if (typeof state !== 'object') {
+  if (this.isUpdating) {
+    throw new Error('You cannot update as updating.')
+  }
+  if (state == null || typeof state !== 'object') {
     throw new TypeError('Expected state to be an object.')
   }
   this.state = Object.freeze(Object.assign({}, this.state, state))
@@ -51,10 +54,10 @@ class Store {
       listeners: [],
       isUpdating: false
     }
-    this.getState = this.getState.bind(_private)
-    this.getUpdater = this.getUpdater.bind(_private)
-    this.subscribe = this.subscribe.bind(_private)
-    const result = descriptor(middleware ? middleware(this.getState, update.bind(_private)) : update.bind(_private))
+    let _update = () => {
+      throw new Error('Updating while constructing store is not allowed, this error may be caused by throwing error while constructing middleware.')
+    }
+    const result = descriptor(arg => _update(arg))
     if (result == null || typeof result !== 'object') {
       throw new TypeError('Expected return value from descriptor to be an object.')
     }
@@ -68,6 +71,10 @@ class Store {
     })
     Object.freeze(state)
     Object.freeze(updater)
+    this.getState = this.getState.bind(_private)
+    this.getUpdater = this.getUpdater.bind(_private)
+    this.subscribe = this.subscribe.bind(_private)
+    _update = middleware ? middleware(this.getState, update.bind(_private)) : update.bind(_private)
   }
   getState() {
     return this.state
@@ -92,7 +99,8 @@ function createStores(descriptors, ...enhancers) {
     throw new TypeError('Expected descriptors to be an object.')
   }
   const stores = Object.keys(descriptors).map(key => {
-    const middleware = enhancers.length ? applyMiddleware(...enhancers.map(enhancer => enhancer(key))) : undefined
+    const middlewares = enhancers.length ? enhancers.map(enhancer => enhancer(key)).filter(middleware => middleware !== null) : undefined
+    const middleware = middlewares && middlewares.length ? applyMiddleware(...middlewares) : undefined
     return {[`${key}$`]: new Store(descriptors[key], middleware)}
   })
   return Object.assign({}, ...stores)
