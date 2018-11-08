@@ -1,6 +1,6 @@
 {
   "name": "rako",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "main": "src/Store.js",
   "repository": "https://github.com/rabbitmeow/rako.git",
   "author": "rabbit <rabbitmeow886@gmail.com>",
@@ -9,6 +9,8 @@
     "test": "jest"
   },
   "devDependencies": {
+    "babel-preset-env": "^1.7.0",
     "jest": "^23.6.0"
-  }
+  },
+  "dependencies": {}
 }

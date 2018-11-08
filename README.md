@@ -1,8 +1,8 @@
-# rako
+# Rako
 
 ## Introduction
 
-`rako` is a declarative state container for Javascript apps.
+Rako is a declarative state container inspired by `OOP` and redux's `action.type` for Javascript apps.
 
 You don't need to learn any concept, just use it. Really simple but powerful.
 
@@ -18,14 +18,14 @@ Work with react: `rako-react`.
 
 ## API
 
-#### `new Store(descriptor: function)`
-- ##### `descriptor(update): object`
+#### `new Store(source: function)`
+- ##### `source(update): object`
 
-#### `createStores(descriptors: object): object`
+#### `createStores(sources: object): object`
 
 #### `store.getState(): object`
 
-#### `store.getUpdater(): object`
+#### `store.getActions(): object`
 
 #### `store.subscribe(listener: function): function`
 
@@ -33,35 +33,36 @@ Work with react: `rako-react`.
 ## Demo
 
 ````js
-function profile(update) {
+function profile(getState) {
   return {
     name: 'rako',
     gender: 'male',
     updateName(name) {
-      update({name})
+      this.update({name})
     },
     updateGender(gender) {
-      update({gender})
+      this.update({gender})
     }
   }
 }
 
-function bank(update) {
+function bank(getState) {
   const calcBalance = (money, balance) => balance + money
+
   return {
     balance: 50,
     send: 0,
     receive: 0,
     sendMoney(money) {
-      const {send, balance} = this
-      update({
+      const {send, balance} = getState()
+      this.update({
         send: send + money,
         balance: calcBalance(-money, balance)
       })
     },
     receiveMoney(money) {
-      const {receive, balance} = this
-      update({
+      const {receive, balance} = getState()
+      this.update({
         receive: receive + money,
         balance: calcBalance(money, balance)
       })
@@ -71,8 +72,11 @@ function bank(update) {
 
 const {profile$, bank$} = createStores({profile, bank})
 
-profile$.subscribe(console.log)
-profile$.getUpdater().updateGender('female')
+profile$.subscribe(state => console.log('subscribe', state))
+
+const actions = profile$.getActions()
+
+actions.updateGender('female')
 ````
 
 example link: https://codesandbox.io/s/011136qpkn
