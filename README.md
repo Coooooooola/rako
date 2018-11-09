@@ -18,10 +18,7 @@ Work with react: `rako-react`.
 
 ## API
 
-#### `new Store(source: function)`
-- ##### `source(update): object`
-
-#### `createStores(sources: object): object`
+#### `createStores(sources: object, ...enhancers: Array<enhancer>): object`
 
 #### `store.getState(): object`
 
@@ -33,50 +30,26 @@ Work with react: `rako-react`.
 ## Demo
 
 ````js
-function profile(getState) {
+function counter(getState) {
   return {
-    name: 'rako',
-    gender: 'male',
-    updateName(name) {
-      this.update({name})
+    value: 0,
+    increment() {
+      const {value} = getState()
+      this.update({value: value + 1})
     },
-    updateGender(gender) {
-      this.update({gender})
+    decrement() {
+      const {value} = getState()
+      this.update({value: value - 1})
     }
   }
 }
 
-function bank(getState) {
-  const calcBalance = (money, balance) => balance + money
+const {counter$} = createStores({counter})
 
-  return {
-    balance: 50,
-    send: 0,
-    receive: 0,
-    sendMoney(money) {
-      const {send, balance} = getState()
-      this.update({
-        send: send + money,
-        balance: calcBalance(-money, balance)
-      })
-    },
-    receiveMoney(money) {
-      const {receive, balance} = getState()
-      this.update({
-        receive: receive + money,
-        balance: calcBalance(money, balance)
-      })
-    }
-  }
-}
-
-const {profile$, bank$} = createStores({profile, bank})
-
-profile$.subscribe(state => console.log('subscribe', state))
+counter$.subscribe(state => console.log('subscribe', state))
 
 const actions = profile$.getActions()
-
-actions.updateGender('female')
+actions.increment()
 ````
 
 example link: https://codesandbox.io/s/011136qpkn

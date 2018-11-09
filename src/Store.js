@@ -130,7 +130,6 @@ function createStores(sources, ...enhancers) {
 }
 
 export {
-  applyMiddleware,
   createStores
 }
 export default Store
