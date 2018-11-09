@@ -48,7 +48,7 @@ const {counter$} = createStores({counter})
 
 counter$.subscribe(state => console.log('subscribe', state))
 
-const actions = profile$.getActions()
+const actions = counter$.getActions()
 actions.increment()
 ````
 
