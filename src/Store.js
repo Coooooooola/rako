@@ -44,9 +44,9 @@ function update(action) {
 }
 
 class Store {
-  constructor(source, middleware) {
-    if (typeof source !== 'function') {
-      throw new TypeError('`new Store`: Expected `source` to be a function, but got: ' + (source == null ? source : typeof source) + '.')
+  constructor(producer, middleware) {
+    if (typeof producer !== 'function') {
+      throw new TypeError('`new Store`: Expected `producer` to be a function, but got: ' + (producer == null ? producer : typeof producer) + '.')
     }
     if (middleware !== undefined && typeof middleware !== 'function') {
       throw new TypeError('`new Store`: Expected `middleware` to be a function, but got: ' + (middleware == null ? middleware : typeof middleware) + '.')
@@ -68,9 +68,9 @@ class Store {
     let isSync = false
     const updatePointer = type => substate => _update({type, substate, isSync})
 
-    const result = source(() => getState())
+    const result = producer(() => getState())
     if (result == null || typeof result !== 'object') {
-      throw new TypeError('`new Store`: Expected `return value` from `source` to be an object, but got: ' + (result == null ? result : typeof result) + '.')
+      throw new TypeError('`new Store`: Expected `return value` from `producer` to be an object, but got: ' + (result == null ? result : typeof result) + '.')
     }
     Object.keys(result).forEach(key => {
       const value = result[key]
@@ -117,14 +117,14 @@ class Store {
   }
 }
 
-function createStores(sources, ...enhancers) {
-  if (sources == null || typeof sources !== 'object') {
-    throw new TypeError('`createStores`: Expected `sources` to be an object, but got: ' + (sources == null ? sources : typeof sources) + '.')
+function createStores(producers, ...enhancers) {
+  if (producers == null || typeof producers !== 'object') {
+    throw new TypeError('`createStores`: Expected `producers` to be an object, but got: ' + (producers == null ? producers : typeof producers) + '.')
   }
-  const stores = Object.keys(sources).map(key => {
+  const stores = Object.keys(producers).map(key => {
     const middlewares = enhancers.length ? enhancers.map(enhancer => enhancer(key)).filter(middleware => middleware !== null) : undefined
     const middleware = middlewares && middlewares.length ? applyMiddleware(...middlewares) : undefined
-    return {[`${key}$`]: new Store(sources[key], middleware)}
+    return {[`${key}$`]: new Store(producers[key], middleware)}
   })
   return Object.assign({}, ...stores)
 }

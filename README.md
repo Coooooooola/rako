@@ -18,7 +18,7 @@ Work with react: `rako-react`.
 
 ## API
 
-#### `createStores(sources: object, ...enhancers: Array<enhancer>): object`
+#### `createStores(producers: object, ...enhancers: Array<enhancer>): object`
 
 #### `store.getState(): object`
 
