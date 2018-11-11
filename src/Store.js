@@ -25,15 +25,10 @@ function unsubscribe(listener) {
   }
 }
 
-function update(action) {
+function update({substate}) {
   if (this.isUpdating) {
     throw new Error('`update`: Don\'t `update` as updating.')
   }
-  // This problem can only occur when you develop `enhancer`, most of users needn't to learn how to write `enhancer`, so I remove it.
-  // if (action == null || typeof action !== 'object') {
-  //   throw new Error('`update`: Expected `action` to be an object, but got: ' + (action == null ? action : typeof action) + '.')
-  // }
-  const {substate} = action
   if (substate == null || typeof substate !== 'object') {
     throw new TypeError('`update`: Expected `state` to be an object, but got: ' + (substate == null ? substate : typeof substate) + '.')
   }
@@ -75,10 +70,9 @@ class Store {
     Object.keys(result).forEach(key => {
       const value = result[key]
       if (typeof value === 'function') {
-        const context = {update: updatePointer(key)}
         actions[key] = (...args) => {
           isSync = true
-          const ret = value.apply(context, args)
+          const ret = value.apply({update: updatePointer(key)}, args)
           isSync = false
           return ret
         }
