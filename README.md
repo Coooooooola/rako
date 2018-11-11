@@ -23,6 +23,7 @@ You don't need to learn any concept, just use it. Really simple but powerful.
 
 
 ## Work with React
+
 `rako-react`: https://github.com/rabbitooops/rako-react
 
 
@@ -32,6 +33,8 @@ You don't need to learn any concept, just use it. Really simple but powerful.
 https://codesandbox.io/s/011136qpkn
 
 After you open the link of **codeSandbox** above, because **codeSandbox** doesn't support `console.group`, please press **`Ctrl + Shift + J`**(on Windows) or **`Ctrl + Option + J`**(on macOS) to open **DevTools > Console**.
+
+![example](./imgs/example.png)
 
 
 
@@ -116,5 +119,10 @@ That's all usages of Rako! really simple.
 
 ## Note
 
-`action` in Rako is different to Redux's.
+**`action` in Rako is different to Redux's.**
 
+**`action` in Rako is equivalent to OOP's `method`.** In other words, `action` is belong to someone, `action` in Rako is to be used by someone to do something.
+
+For example, `increment` is belong to `counter$`, `counter$` use `increment` to increase value.
+
+But `action` in Redux is not belong to anyone, because Redux's data flow is `Process-oriented programming`, Redux dispatch an `action` to trigger a recalculation.
