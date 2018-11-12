@@ -10,7 +10,7 @@ You don't need to learn any concept, just use it. Really simple but powerful.
 
 **Rako is an entirely new design instead of redux like state container.**
 
-![mvc](https://developer.chrome.com/static/images/mvc.png)
+![mvc](./imgs/mvc.png)
 
 **In fact, Rako is more like a Controller in MVC.**
 
