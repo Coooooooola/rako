@@ -7,8 +7,13 @@ function applyMiddleware(...middlewares) {
     let _update = () => {
       throw new Error('`applyMiddleware`: Don\'t `update` as constructing `middleware`.')
     }
-    const dispatch = action => _update(action)
-    const chain = middlewares.map(middleware => middleware(getState, dispatch))
+
+    // When you develop `enhancer`, plase pass `{type, substate, isSync}` to `execute`.
+    // The `type` should be `[enhancerName](enhancer)`.
+    // For example, enhancer `logger`'s type should be [logger](enhancer).
+    const execute = action => _update(action)
+
+    const chain = middlewares.map(middleware => middleware(getState, execute))
     _update = compose(chain)(update)
     return _update
   }

@@ -115,6 +115,39 @@ That's all usages of Rako! really simple.
 
 #### `store.getActions(): object`
 
+### `producer`:
+
+```js
+function producer(getState) {
+
+  // you cannot `getState()` as constructing `Store`, otherwise it will cause an error.
+  // getState()
+  
+  return {
+    value: undefined,
+    doSomething(value) {
+      this.update({value})
+    },
+    doSomethingAsync(value) {
+      setTimeout(() => {
+        this.update({value})
+      }, 1000)
+    }
+    doSomethingWithoutUpdating() {
+      const {value} = getState()
+
+      // Network request, side effects, whatever you want.
+      // Rako is more like a Controller in MVC.
+      networkRequest(value)
+      doSomeSideEffects(value)
+    }
+  }
+}
+```
+
+#### `getState()` in `producer` is equivalent to `store.getState()`, but you cannot `getState()` as constructing `Store`.
+#### `this.update(substate: object)`
+
 
 
 ## Note
