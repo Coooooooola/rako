@@ -1,7 +1,7 @@
 {
   "name": "rako",
-  "version": "0.2.4",
-  "main": "src/Store.js",
+  "version": "0.3.0",
+  "main": "src",
   "repository": "https://github.com/rabbitmeow/rako.git",
   "author": "rabbit <rabbitmeow886@gmail.com>",
   "license": "MIT",

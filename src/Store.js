@@ -1,101 +1,71 @@
-function compose(funcs) {
-  return funcs.reduce((a, b) => arg => a(b(arg)))
-}
-
-function applyMiddleware(...middlewares) {
-  return (getState, update) => {
-    let _update = () => {
-      throw new Error('`applyMiddleware`: Don\'t `update` as constructing `middleware`.')
-    }
-
-    // When you develop `enhancer`, plase pass `{type, substate, isSync}` to `execute`.
-    // The `type` should be `[enhancerName](enhancer)`.
-    // For example, enhancer `logger`'s type should be [logger](enhancer).
-    const execute = action => _update(action)
-
-    const chain = middlewares.map(middleware => middleware(getState, execute))
-    _update = compose(chain)(update)
-    return _update
-  }
-}
-
-function unsubscribe(listener) {
-  if (this.isUpdating) {
-    throw new Error('`unsubscribe`: Don\'t `unsubscribe` as updating.')
-  }
-  const index = this.listeners.indexOf(listener)
-  if (index !== -1) {
-    this.listeners.splice(index, 1)
-    return listener
-  }
-}
-
-function update({substate}) {
-  if (this.isUpdating) {
-    throw new Error('`update`: Don\'t `update` as updating.')
+function setState(substate) {
+  if (this.isSettingState) {
+    throw new Error('`setState`: Don\'t `setState` as setting state.')
   }
   if (substate == null || typeof substate !== 'object') {
-    throw new TypeError('`update`: Expected `state` to be an object, but got: ' + (substate == null ? substate : typeof substate) + '.')
+    throw new TypeError('`setState`: Expected `substate` to be an object, but got: ' + (substate == null ? substate : typeof substate) + '.')
   }
   this.state = Object.freeze(Object.assign({}, this.state, substate))
-  this.isUpdating = true
+  this.isSettingState = true
   this.listeners.forEach(listener => listener(this.state))
-  this.isUpdating = false
+  this.isSettingState = false
 }
 
 class Store {
   constructor(producer, middleware) {
     if (typeof producer !== 'function') {
-      throw new TypeError('`new Store`: Expected `producer` to be a function, but got: ' + (producer == null ? producer : typeof producer) + '.')
+      throw new TypeError('`Store`: Expected `producer` to be a function, but got: ' + (producer == null ? producer : typeof producer) + '.')
     }
     if (middleware !== undefined && typeof middleware !== 'function') {
-      throw new TypeError('`new Store`: Expected `middleware` to be a function, but got: ' + (middleware == null ? middleware : typeof middleware) + '.')
-    }
-    const state = {}
-    const actions = {}
-    const _private = {
-      state,
-      actions,
-      listeners: [],
-      isUpdating: false
+      throw new TypeError('`Store`: Expected `middleware` to be a function, but got: ' + (middleware == null ? middleware : typeof middleware) + '.')
     }
 
     let getState = () => {
-      throw new Error('`new Store`: Don\'t `getState` as constructing store.')
+      throw new Error('`Store`: Don\'t `getState` as constructing store.')
     }
-
-    let _update
-    let isSync = false
-    const updatePointer = type => substate => _update({type, substate, isSync})
-
     const result = producer(() => getState())
     if (result == null || typeof result !== 'object') {
-      throw new TypeError('`new Store`: Expected `return value` from `producer` to be an object, but got: ' + (result == null ? result : typeof result) + '.')
+      throw new TypeError('`Store`: Expected returned value from `producer` to be an object, but got: ' + (result == null ? result : typeof result) + '.')
     }
+
+    let _setState
+    let isSync = false
+    const setStatePointer = type => substate => _setState({type, substate, isSync})
+
+    const values = []
+    const functions = []
     Object.keys(result).forEach(key => {
       const value = result[key]
       if (typeof value === 'function') {
-        actions[key] = (...args) => {
+        functions.push({[key]: (...args) => {
           isSync = true
-          const ret = value.apply({update: updatePointer(key)}, args)
+          const ret = value.apply({setState: setStatePointer(key)}, args)
           isSync = false
           return ret
-        }
+        }})
       } else {
-        state[key] = value
+        values.push({[key]: value})
       }
     })
 
-    Object.freeze(state)
-    Object.freeze(actions)
+    const _private = {
+      state: Object.freeze(Object.assign({}, ...values)),
+      actions: Object.freeze(Object.assign({}, ...functions)),
+      listeners: [],
+      isSettingState: false
+    }
+
     this.getState = this.getState.bind(_private)
     this.getActions = this.getActions.bind(_private)
     this.subscribe = this.subscribe.bind(_private)
 
-    getState = () => {
-      throw new Error('new State: `getState` was broken because an error was throwing as applying `middleware`, fixing the bug in `middleware` to return normal.')
+    _setState = ({substate}) => setState.call(_private, substate)
+    if (middleware) {
+        getState = () => {
+          throw new Error('`getState` was broken because an error was throwing as applying `middleware`, fixing the bug in `middleware` to return normal.')
+        }
+      _setState = middleware(this.getState, _setState)
     }
-    _update = middleware ? middleware(this.getState, update.bind(_private)) : update.bind(_private)
     getState = this.getState
   }
   getState() {
@@ -105,30 +75,27 @@ class Store {
     return this.actions
   }
   subscribe(listener) {
-    if (this.isUpdating) {
-      throw new Error('`subscribe`: Don\'t `subscribe` as updating.')
+    if (this.isSettingState) {
+      throw new Error('`subscribe`: Don\'t `subscribe` as setting state.')
     }
     if (typeof listener !== 'function') {
       throw new TypeError('`subscribe`: Expected `listener` to be a function, but got: ' + (listener == null ? listener : typeof listener) + '.')
     }
     this.listeners.push(listener)
-    return unsubscribe.bind(this, listener)
+
+    const self = this
+    return function unsubscribe() {
+      if (self.isSettingState) {
+        throw new Error('`unsubscribe`: Don\'t `unsubscribe` as setting state.')
+      }
+      const index = self.listeners.indexOf(listener)
+      if (index !== -1) {
+        self.listeners.splice(index, 1)
+        return listener
+      }
+    }
   }
 }
 
-function createStores(producers, ...enhancers) {
-  if (producers == null || typeof producers !== 'object') {
-    throw new TypeError('`createStores`: Expected `producers` to be an object, but got: ' + (producers == null ? producers : typeof producers) + '.')
-  }
-  const stores = Object.keys(producers).map(key => {
-    const middlewares = enhancers.length ? enhancers.map(enhancer => enhancer(key)).filter(middleware => middleware !== null) : undefined
-    const middleware = middlewares && middlewares.length ? applyMiddleware(...middlewares) : undefined
-    return {[`${key}$`]: new Store(producers[key], middleware)}
-  })
-  return Object.assign({}, ...stores)
-}
 
-export {
-  createStores
-}
 export default Store

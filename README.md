@@ -4,15 +4,11 @@
 
 ## Introduction
 
-Rako is a declarative, predictable, scalable and high cohesion state container inspired by `OOP` and the purpose of redux's `action.type` for Javascript apps.
+Rako is a declarative and predictable state container inspired by `OOP` and the purpose of `action.type` in Redux for Javascript apps.
 
-You don't need to learn any concept, just use it. Really simple but powerful. 
-
-**Rako is an entirely new design instead of redux like state container.**
+**Rako is like a Controller in MVC.**
 
 ![mvc](./imgs/mvc.png)
-
-**In fact, Rako is more like a Controller in MVC.**
 
 
 
@@ -24,15 +20,15 @@ You don't need to learn any concept, just use it. Really simple but powerful.
 
 ## Work with React
 
-`rako-react`: https://github.com/rabbitooops/rako-react
+> `rako-react`: **https://github.com/rabbitooops/rako-react**
 
 
 
 ## Example
 
-https://codesandbox.io/s/011136qpkn
+> `rako-react-example`: **https://codesandbox.io/s/011136qpkn**
 
-After you open the link of **codeSandbox** above, because **codeSandbox** doesn't support `console.group`, please press **`Ctrl + Shift + J`**(on Windows) or **`Ctrl + Option + J`**(on macOS) to open **DevTools > Console**.
+After you open the link of **codeSandbox** above, because **codeSandbox** doesn't support `console.group`, please press **`Ctrl + Shift + J`**(on Windows) or **`Ctrl + Option + J`**(on macOS) to open **\`DevTools > Console\`**.
 
 ![example](./imgs/example.png)
 
@@ -55,59 +51,77 @@ counter.increment()
 Let's transform it for fitting our design:
 
 > 1. Immutable state.
-> 2. Do some side effects every updating.
+> 2. Do some side subscribes every updating.
+> 3. Locate `setState` as updating. (You have got to open the example link above to get more details.)
 
 ```js
+import {withEnhancers, createStores} from 'rako'
+
+/**
+ * I call such function as `producer`.
+ * `producer` produces an object which be used to construct `Store`.
+ */
 function counter(getState) {
   return {
     value: 0,
     increment() {
       const {value} = getState()
-      this.update({value: value + 1})
+      this.setState({value: value + 1})
     }
   }
 }
-const {counter$} = createStores({counter})
 
-const actions = counter$.getActions()
+/**
+ * createStores(...producers: Array<function>): Array<Store>
+ * 
+ * Usage: Create stores.
+ */
+const [counterStore] = createStores(counter)
+
+/**
+ * withEnhaner(...enhancers: Array<function>): createStores
+ * 
+ * Usage: You can also use `withEnhancers` for using some enhancers such as `rako-logger` to create stores.
+ * The returned value is the same as `createStore`.
+ */
+// const [counterStore] = withEnhancers(logger('counterModule'))(counter)
+
+
+/**
+ * store.getState()
+ * 
+ * Usage: Get store's state.
+ */
+console.log(counterStore.getState())  // Print `{value: 0}`
+
+/**
+ * store.subscribe(listener: function): function
+ * 
+ * Usage: Subscribe a side effect, return an `unsubscribe` function,
+ * you can call `unsubscribe()` to unsubscribe this side effect.
+ */
+const unsubscribe = counterStore.subscribe(state => console.log('state:', state))
+
+/**
+ * store.getActions()
+ * 
+ * Usage: Before `increment`, you have got to get `actions` from `counterStore`.
+ */
+const actions = counterStore.getActions()
+
+// The Console will print `state: {value: 1}` after updating `state`.
 actions.increment()
 ```
 
-It's very similar to former, just **use a function to wrap `counter`, use parameter `getState` to get state and use `this.update` to update state.**
-This simple design is enough for Rako to do some magical things in background.
-
-`createStores` receives an object, returns a processed object(every key in object was transformed to `` `${key}$` ``). In this case, `counter` was renamed `counter$`(as a shorthand of `counterStore`), `counter$` is an instance of Rako's `Store`.
-
-
-Let's get state:
-```js
-counter$.getState() // {value: 0}
-```
-
-Let's susbscribe some side effects:
-```js
-counter$.subscribe(state => console.log('subscribe', state))
-```
-
-Let's update state. Before updating, you have got to get `actions` from `counter$`:
-```js
-const actions = counter$.getActions()
-```
-
-Then, increase value:
-```js
-actions.increment()
-```
-
-after calling it, the Console will print `subscribe {value: 1}` after updating state.
-
-That's all usages of Rako! really simple.
+That's all usage of Rako!
 
 
 
 ## API
 
-#### `createStores(producers: object, ...enhancers: Array<enhancer>): object`
+#### `createStores(...producers: Array<function>): Array<Store>`
+
+#### `withEnhancers(...enhancers: Array<function>): createStores`
 
 #### `store.subscribe(listener: function): function`
 
@@ -115,47 +129,43 @@ That's all usages of Rako! really simple.
 
 #### `store.getActions(): object`
 
-### `producer`:
+
+#### Usage of `producer`:
 
 ```js
 function producer(getState) {
 
-  // you cannot `getState()` as constructing `Store`, otherwise it will cause an error.
+  // you can't call `getState()` as constructing `Store`, otherwise it will cause an error.
   // getState()
-  
+
   return {
-    value: undefined,
+    value: 0,
     doSomething(value) {
-      this.update({value})
+      this.setState({value})
     },
     doSomethingAsync(value) {
       setTimeout(() => {
-        this.update({value})
+        this.setState({value})
       }, 1000)
-    }
-    doSomethingWithoutUpdating() {
+    },
+    doAnythingYouWant() {
       const {value} = getState()
 
-      // Network request, side effects, whatever you want.
-      // Rako is more like a Controller in MVC.
+      // Network request, calculation, whatever you want, Rako is like a Controller in MVC.
       networkRequest(value)
-      doSomeSideEffects(value)
+      calculation(value)
+      this.setState({value: value + 1})
     }
   }
 }
 ```
 
-#### `getState()` in `producer` is equivalent to `store.getState()`, but you cannot `getState()` as constructing `Store`.
-#### `this.update(substate: object)`
+**`getState()` in `producer` is equivalent to `store.getState()`, but you can't `getState()` as constructing `Store`.**
+
+**`this.setState(substate: object)`**
 
 
 
 ## Note
 
-**`action` in Rako is different to Redux's.**
-
-**`action` in Rako is equivalent to OOP's `method`.** In other words, `action` is belong to someone, `action` in Rako is to be used by someone to do something.
-
-For example, `increment` is belong to `counter$`, `counter$` use `increment` to increase value.
-
-But `action` in Redux is not belong to anyone, because Redux's data flow is `Process-oriented programming`, Redux dispatch an `action` to trigger a recalculation.
+**The concept of `action` in Rako is different to Redux's.** You can learn MVC mentioned before.
