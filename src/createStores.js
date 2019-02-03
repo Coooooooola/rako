@@ -17,19 +17,8 @@ function applyMiddleware(middlewares) {
 
 
 function _createStores(producers, enhancers) {
-  const set = new Set()
-  producers.forEach(producer => {
-    if (typeof producer !== 'function') {
-      throw new TypeError('`createStores`: Expected each `producer` in `producers` to be a `function`.')
-    }
-    if (set.has(producer.name)) {
-      throw new Error('`createStores`: Duplicate `producer`\'s name: "' + producer.name + '".')
-    }
-    set.add(producer.name)
-  })
-
   return producers.map(producer => {
-    const middlewares = enhancers.map(enhancer => enhancer(producer.name)).filter(middleware => middleware !== null)
+    const middlewares = enhancers.map(enhancer => enhancer(producer)).filter(middleware => middleware !== null)
     return new Store(producer, middlewares.length ? applyMiddleware(middlewares) : undefined)
   })
 }
