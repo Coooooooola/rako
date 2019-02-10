@@ -34,89 +34,6 @@ After you open the link of **codeSandbox** above, because **codeSandbox** doesn'
 
 
 
-## Design
-
-Rako is inspired by `OOP`, simple and intuitive.
-
-```js
-const counter = {
-  value: 0,
-  increment() {
-    this.value += 1
-  }
-}
-counter.increment()
-```
-
-Let's transform it for fitting our design:
-
-> 1. Immutable state.
-> 2. Do some side subscribes every updating.
-> 3. Locate `setState` as updating. (You have got to open the example link above to get more details.)
-
-```js
-import {withEnhancers, createStores} from 'rako'
-
-/**
- * I call such function as `producer`.
- * `producer` produces an object which be used to construct `Store`.
- */
-function counter(getState) {
-  return {
-    value: 0,
-    increment() {
-      const {value} = getState()
-      this.setState({value: value + 1})
-    }
-  }
-}
-
-/**
- * createStores(...producers: Array<function>): Array<Store>
- * 
- * Usage: Create stores.
- */
-const [counterStore] = createStores(counter)
-
-/**
- * withEnhaner(...enhancers: Array<function>): createStores
- * 
- * Usage: You can also use `withEnhancers` for using some enhancers such as `rako-logger` to create stores.
- * The returned value is the same as `createStore`.
- */
-// const [counterStore] = withEnhancers(logger('counterModule'))(counter)
-
-
-/**
- * store.getState()
- * 
- * Usage: Get store's state.
- */
-console.log(counterStore.getState())  // Print `{value: 0}`
-
-/**
- * store.subscribe(listener: function): function
- * 
- * Usage: Subscribe a side effect, return an `unsubscribe` function,
- * you can call `unsubscribe()` to unsubscribe this side effect.
- */
-const unsubscribe = counterStore.subscribe(state => console.log('state:', state))
-
-/**
- * store.getActions()
- * 
- * Usage: Before `increment`, you have got to get `actions` from `counterStore`.
- */
-const actions = counterStore.getActions()
-
-// The Console will print `state: {value: 1}` after updating `state`.
-actions.increment()
-```
-
-That's all usage of Rako!
-
-
-
 ## API
 
 #### `createStores(...producers: Array<function>): Array<Store>`
@@ -162,7 +79,7 @@ function producer(getState) {
 
 **`getState()` in `producer` is equivalent to `store.getState()`, but you can't `getState()` as constructing `Store`.**
 
-**`this.setState(substate: object)`**
+**`this.setState(substate: object, extra: any?)`**
 
 
 

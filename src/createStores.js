@@ -17,6 +17,9 @@ function applyMiddleware(middlewares) {
 
 
 function _createStores(producers, enhancers) {
+  if (producers.some(producer => typeof producer !== 'function')) {
+    throw new TypeError('`createStores`: Expected every `producer` to be a function.')
+  }
   return producers.map(producer => {
     const middlewares = enhancers.map(enhancer => enhancer(producer)).filter(middleware => middleware !== null)
     return new Store(producer, middlewares.length ? applyMiddleware(middlewares) : undefined)

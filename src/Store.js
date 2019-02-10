@@ -1,4 +1,4 @@
-function setState(substate) {
+function setState({type, isSync, substate, extra}) {
   if (this.isSettingState) {
     throw new Error('`setState`: Don\'t `setState` as setting state.')
   }
@@ -6,8 +6,9 @@ function setState(substate) {
     throw new TypeError('`setState`: Expected `substate` to be an object, but got: ' + (substate == null ? substate : typeof substate) + '.')
   }
   this.state = Object.freeze(Object.assign({}, this.state, substate))
+  const info = Object.freeze({type, isSync, state: this.state, extra})
   this.isSettingState = true
-  this.listeners.forEach(listener => listener(this.state))
+  this.listeners.forEach(listener => listener(info))
   this.isSettingState = false
 }
 
@@ -20,31 +21,35 @@ class Store {
       throw new TypeError('`Store`: Expected `middleware` to be a function, but got: ' + (middleware == null ? middleware : typeof middleware) + '.')
     }
 
-    let getState = () => {
+    let _getState = () => {
       throw new Error('`Store`: Don\'t `getState` as constructing store.')
     }
-    const result = producer(() => getState())
+    const result = producer(function getState() {
+      return _getState()
+    })
     if (result == null || typeof result !== 'object') {
       throw new TypeError('`Store`: Expected returned value from `producer` to be an object, but got: ' + (result == null ? result : typeof result) + '.')
     }
 
     let _setState
-    let isSync = false
-    const setStatePointer = type => substate => _setState({type, substate, isSync})
 
     const values = []
     const functions = []
-    Object.keys(result).forEach(key => {
-      const value = result[key]
+    Object.keys(result).forEach(type => {
+      const value = result[type]
       if (typeof value === 'function') {
-        functions.push({[key]: (...args) => {
-          isSync = true
-          const ret = value.apply({setState: setStatePointer(key)}, args)
+        functions.push({[type](...args) {
+          let isSync = true
+          const ret = value.apply({
+            setState(substate, extra) {
+              return _setState({type, isSync, substate, extra})
+            }
+          }, args)
           isSync = false
           return ret
         }})
       } else {
-        values.push({[key]: value})
+        values.push({[type]: value})
       }
     })
 
@@ -59,14 +64,14 @@ class Store {
     this.getActions = this.getActions.bind(_private)
     this.subscribe = this.subscribe.bind(_private)
 
-    _setState = ({substate}) => setState.call(_private, substate)
+    _setState = setState.bind(_private)
     if (middleware) {
-        getState = () => {
-          throw new Error('`getState` was broken because an error was throwing as applying `middleware`, fixing the bug in `middleware` to return normal.')
+        _getState = () => {
+          throw new Error('`getState` was broken because an error was thrown while connecting to `middleware`, fixing the bug in `middleware` to return normal.')
         }
       _setState = middleware(this.getState, _setState)
     }
-    getState = this.getState
+    _getState = this.getState
   }
   getState() {
     return this.state
