@@ -1,4 +1,4 @@
-function setState({type, isSync, substate, extra}) {
+function updateState({type, isSync, substate, extra}) {
   if (this.isSettingState) {
     throw new Error('`setState`: Don\'t `setState` as setting state.')
   }
@@ -40,16 +40,18 @@ class Store {
     for (const key of Object.keys(result)) {
       const value = result[key]
       if (typeof value === 'function') {
-        functions.push({[key](...args) {
-          let isSync = true
-          const ret = value.apply({
-            setState(substate, extra) {
-              return _setState({type: key, isSync, substate, extra})
-            }
-          }, args)
-          isSync = false
-          return ret
-        }})
+        functions.push({
+          key: function runAction(...args) {
+            let isSync = true
+            const ret = value.apply({
+              setState(substate, extra) {
+                return _setState({type: key, isSync, substate, extra})
+              }
+            }, args)
+            isSync = false
+            return ret
+          }
+        })
       } else {
         values.push({[key]: value})
       }
@@ -66,7 +68,7 @@ class Store {
     this.getActions = this.getActions.bind(_private)
     this.subscribe = this.subscribe.bind(_private)
 
-    _setState = setState.bind(_private)
+    _setState = updateState.bind(_private)
     if (middleware) {
         _getState = () => {
           throw new Error('`getState` was broken because an error was thrown while connecting to `middleware`, fixing the bug in `middleware` to return normal.')
