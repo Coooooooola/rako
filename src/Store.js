@@ -41,7 +41,7 @@ class Store {
       const value = result[key]
       if (typeof value === 'function') {
         functions.push({
-          key: function runAction(...args) {
+          [key]: function runAction(...args) {
             let isSync = true
             const ret = value.apply({
               setState(substate, extra) {
