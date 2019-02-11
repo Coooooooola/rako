@@ -8,7 +8,9 @@ function setState({type, isSync, substate, extra}) {
   this.state = Object.freeze(Object.assign({}, this.state, substate))
   const info = Object.freeze({type, isSync, state: this.state, extra})
   this.isSettingState = true
-  this.listeners.forEach(listener => listener(info))
+  for (const listener of this.listeners) {
+    listener(info)
+  }
   this.isSettingState = false
 }
 
@@ -35,23 +37,23 @@ class Store {
 
     const values = []
     const functions = []
-    Object.keys(result).forEach(type => {
-      const value = result[type]
+    for (const key of Object.keys(result)) {
+      const value = result[key]
       if (typeof value === 'function') {
-        functions.push({[type](...args) {
+        functions.push({[key](...args) {
           let isSync = true
           const ret = value.apply({
             setState(substate, extra) {
-              return _setState({type, isSync, substate, extra})
+              return _setState({type: key, isSync, substate, extra})
             }
           }, args)
           isSync = false
           return ret
         }})
       } else {
-        values.push({[type]: value})
+        values.push({[key]: value})
       }
-    })
+    }
 
     const _private = {
       state: Object.freeze(Object.assign({}, ...values)),
