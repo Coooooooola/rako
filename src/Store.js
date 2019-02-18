@@ -1,17 +1,21 @@
-function updateState({type, isSync, substate, extra}) {
-  if (this.isSettingState) {
-    throw new Error('`setState`: Don\'t `setState` as setting state.')
+function updateStore({type, isSync, substate, extra}) {
+  if (this.isUpdatingStore) {
+    throw new Error('Don\'t `setState` as setting state.')
   }
   if (substate == null || typeof substate !== 'object') {
-    throw new TypeError('`setState`: Expected `substate` to be an object, but got: ' + (substate == null ? substate : typeof substate) + '.')
+    throw new TypeError('Expected `substate` to be an object, but got: ' + (substate == null ? substate : typeof substate) + '.')
   }
   this.state = Object.freeze(Object.assign({}, this.state, substate))
   const info = Object.freeze({type, isSync, state: this.state, extra})
-  this.isSettingState = true
-  for (const listener of this.listeners) {
-    listener(info)
+
+  this.isUpdatingStore = true
+  try {
+    for (const listener of this.listeners) {
+      listener(info)
+    }
+  } finally {
+    this.isUpdatingStore = false
   }
-  this.isSettingState = false
 }
 
 class Store {
@@ -43,13 +47,17 @@ class Store {
         functions.push({
           [key]: function runAction(...args) {
             let isSync = true
-            const ret = value.apply({
-              setState(substate, extra) {
-                return _setState({type: key, isSync, substate, extra})
-              }
-            }, args)
-            isSync = false
-            return ret
+            let ret
+            try {
+              ret = value.apply({
+                setState(substate, extra) {
+                  return _setState({type: key, isSync, substate, extra})
+                }
+              }, args)
+            } finally {
+              isSync = false
+              return ret
+            }
           }
         })
       } else {
@@ -61,14 +69,14 @@ class Store {
       state: Object.freeze(Object.assign({}, ...values)),
       actions: Object.freeze(Object.assign({}, ...functions)),
       listeners: [],
-      isSettingState: false
+      isUpdatingStore: false
     }
 
     this.getState = this.getState.bind(_private)
     this.getActions = this.getActions.bind(_private)
     this.subscribe = this.subscribe.bind(_private)
 
-    _setState = updateState.bind(_private)
+    _setState = updateStore.bind(_private)
     if (middleware) {
         _getState = () => {
           throw new Error('`getState` was broken because an error was thrown while connecting to `middleware`, fixing the bug in `middleware` to return normal.')
@@ -84,7 +92,7 @@ class Store {
     return this.actions
   }
   subscribe(listener) {
-    if (this.isSettingState) {
+    if (this.isUpdatingStore) {
       throw new Error('`subscribe`: Don\'t `subscribe` as setting state.')
     }
     if (typeof listener !== 'function') {
@@ -94,14 +102,16 @@ class Store {
 
     const self = this
     return function unsubscribe() {
-      if (self.isSettingState) {
+      if (self.isUpdatingStore) {
         throw new Error('`unsubscribe`: Don\'t `unsubscribe` as setting state.')
       }
-      const index = self.listeners.indexOf(listener)
-      if (index !== -1) {
-        self.listeners.splice(index, 1)
-        return listener
+      if (!listener) {
+        return
       }
+      self.listeners.splice(self.listeners.indexOf(listener), 1)
+      const ret = listener
+      listener = null
+      return ret
     }
   }
 }
