@@ -1,120 +1,109 @@
-function updateStore({type, isSync, substate, extra}) {
-  if (this.isUpdatingStore) {
-    throw new Error('Don\'t `setState` as setting state.')
+function Store(producer, enhancer) {
+  let _getState = function getState() {
+    throw new Error("Don't `getState` as constructing store.")
   }
-  if (substate == null || typeof substate !== 'object') {
-    throw new TypeError('Expected `substate` to be an object, but got: ' + (substate == null ? substate : typeof substate) + '.')
+  const result = producer(function getState() {
+    return _getState()
+  })
+  if (result == null || typeof result !== 'object') {
+    throw new TypeError("Expected returned value from `producer` to be an object.")
   }
-  this.state = Object.freeze(Object.assign({}, this.state, substate))
-  const info = Object.freeze({type, isSync, state: this.state, extra})
 
-  this.isUpdatingStore = true
-  try {
-    for (const listener of this.listeners) {
-      listener(info)
-    }
-  } finally {
-    this.isUpdatingStore = false
-  }
-}
 
-class Store {
-  constructor(producer, middleware) {
-    if (typeof producer !== 'function') {
-      throw new TypeError('`Store`: Expected `producer` to be a function, but got: ' + (producer == null ? producer : typeof producer) + '.')
-    }
-    if (middleware !== undefined && typeof middleware !== 'function') {
-      throw new TypeError('`Store`: Expected `middleware` to be a function, but got: ' + (middleware == null ? middleware : typeof middleware) + '.')
-    }
+  let _setState
 
-    let _getState = () => {
-      throw new Error('`Store`: Don\'t `getState` as constructing store.')
-    }
-    const result = producer(function getState() {
-      return _getState()
-    })
-    if (result == null || typeof result !== 'object') {
-      throw new TypeError('`Store`: Expected returned value from `producer` to be an object, but got: ' + (result == null ? result : typeof result) + '.')
-    }
-
-    let _setState
-
-    const values = []
-    const functions = []
-    for (const key of Object.keys(result)) {
-      const value = result[key]
-      if (typeof value === 'function') {
-        functions.push({
-          [key]: function runAction(...args) {
-            let isSync = true
-            let ret
-            try {
-              ret = value.apply({
-                setState(substate, extra) {
-                  return _setState({type: key, isSync, substate, extra})
-                }
-              }, args)
-            } finally {
-              isSync = false
-              return ret
-            }
+  const values = []
+  const functions = []
+  for (const key of Object.keys(result)) {
+    const value = result[key]
+    if (typeof value === 'function') {
+      functions.push({
+        [key]: function runAction(...args) {
+          let isSync = true
+          let ret
+          try {
+            ret = value.apply({
+              setState(substate, extra) {
+                return _setState(substate, extra, key, isSync)
+              }
+            }, args)
+          } finally {
+            isSync = false
+            return ret
           }
-        })
-      } else {
-        values.push({[key]: value})
-      }
-    }
-
-    const _private = {
-      state: Object.freeze(Object.assign({}, ...values)),
-      actions: Object.freeze(Object.assign({}, ...functions)),
-      listeners: [],
-      isUpdatingStore: false
-    }
-
-    this.getState = this.getState.bind(_private)
-    this.getActions = this.getActions.bind(_private)
-    this.subscribe = this.subscribe.bind(_private)
-
-    _setState = updateStore.bind(_private)
-    if (middleware) {
-        _getState = () => {
-          throw new Error('`getState` was broken because an error was thrown while connecting to `middleware`, fixing the bug in `middleware` to return normal.')
         }
-      _setState = middleware(this.getState, _setState)
+      })
+    } else {
+      values.push({[key]: value})
     }
-    _getState = this.getState
   }
-  getState() {
-    return this.state
+
+
+  let state = Object.freeze(Object.assign({}, ...values))
+  const actions = Object.freeze(Object.assign({}, ...functions))
+  const listeners = []
+  let isUpdatingStore = false
+
+
+  this.getState = function getState() {
+    return state
   }
-  getActions() {
-    return this.actions
+  this.getActions = function getActions() {
+    return actions
   }
-  subscribe(listener) {
-    if (this.isUpdatingStore) {
-      throw new Error('`subscribe`: Don\'t `subscribe` as setting state.')
+  this.subscribe = function subscribe(listener) {
+    if (isUpdatingStore) {
+      throw new Error("Don't `subscribe` as setting state.")
     }
     if (typeof listener !== 'function') {
-      throw new TypeError('`subscribe`: Expected `listener` to be a function, but got: ' + (listener == null ? listener : typeof listener) + '.')
+      throw new TypeError("Expected `listener` to be a function.")
     }
-    this.listeners.push(listener)
+    listeners.push(listener)
 
-    const self = this
     return function unsubscribe() {
-      if (self.isUpdatingStore) {
-        throw new Error('`unsubscribe`: Don\'t `unsubscribe` as setting state.')
+      if (isUpdatingStore) {
+        throw new Error("Don't `unsubscribe` as setting state.")
       }
       if (!listener) {
         return
       }
-      self.listeners.splice(self.listeners.indexOf(listener), 1)
+      listeners.splice(listeners.indexOf(listener), 1)
       const ret = listener
       listener = null
       return ret
     }
   }
-}
 
+
+  _setState = function updateStore(substate, extra, type, isSync) {
+    if (isUpdatingStore) {
+      throw new Error("Don't `setState` as setting state.")
+    }
+    if (substate == null || typeof substate !== 'object') {
+      throw new TypeError("Expected `substate` to be an object.")
+    }
+    state = Object.freeze(Object.assign({}, state, substate))
+
+    isUpdatingStore = true
+    try {
+      for (const listener of listeners) {
+        listener(state, extra, type, isSync)
+      }
+    } finally {
+      isUpdatingStore = false
+    }
+  }
+
+
+  if (enhancer) {
+      _getState = function getState() {
+        throw new Error("`getState` was broken.")
+      }
+    _setState = enhancer(this.getState, _setState, actions)
+  }
+
+
+  _getState = this.getState
+}
 
 export default Store

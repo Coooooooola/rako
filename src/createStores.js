@@ -5,24 +5,24 @@ function compose(functions) {
 }
 
 function applyMiddleware(middlewares) {
-  return (getState, setState) => {
+  return function enhancer(getState, setState, actions) {
     let _setState = setState
     const setStatePointer = payload => _setState(payload)
 
-    const chain = middlewares.map(middleware => middleware(getState, setStatePointer))
+    const chain = middlewares.map(middleware => middleware(getState, setStatePointer, actions))
     _setState = compose(chain)(setState)
     return _setState
   }
 }
 
 
-function _createStores(producers, enhancers) {
+function _createStores(producers, middlewares) {
   if (producers.some(producer => typeof producer !== 'function')) {
-    throw new TypeError('`createStores`: Expected every `producer` to be a function.')
+    throw new TypeError("Expected every `producer` to be a function.")
   }
   return producers.map(producer => {
-    const middlewares = enhancers.map(enhancer => enhancer(producer)).filter(middleware => middleware !== null)
-    return new Store(producer, middlewares.length ? applyMiddleware(middlewares) : undefined)
+    const maturedMiddlewares = middlewares.map(middleware => middleware(producer)).filter(maturedMiddleware => maturedMiddleware !== null)
+    return new Store(producer, maturedMiddlewares.length ? applyMiddleware(maturedMiddlewares) : undefined)
   })
 }
 
