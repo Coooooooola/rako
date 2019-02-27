@@ -1,3 +1,3 @@
 export {default} from './Store'  
-export {withEnhancers} from './withEnhancers'
+export {withMiddlewares} from './withMiddlewares'
 export {createStores} from './createStores'
