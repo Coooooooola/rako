@@ -38,7 +38,7 @@ After you open the link of **codeSandbox** above, because **codeSandbox** doesn'
 
 #### `createStores(...producers: Array<function>): Array<Store>`
 
-#### `withMiddlewares(...enhancers: Array<function>): createStores`
+#### `withMiddlewares(...middlewares: Array<function>): createStores`
 
 #### `store.subscribe(listener: function): function`
 
