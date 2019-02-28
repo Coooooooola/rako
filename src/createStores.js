@@ -7,7 +7,9 @@ function compose(functions) {
 function applyMiddleware(middlewares) {
   return function enhancer(getState, setState, actions) {
     let _setState = setState
-    const setStatePointer = payload => _setState(payload)
+    const setStatePointer = function setState(substate, extra, type, isSync) {
+      return _setState(substate, extra, type, isSync)
+    }
 
     const chain = middlewares.map(middleware => middleware(getState, setStatePointer, actions))
     _setState = compose(chain)(setState)
