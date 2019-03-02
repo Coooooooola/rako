@@ -4,7 +4,7 @@
 
 ## Introduction
 
-Rako is a declarative and traceable state container inspired by `OOP` and the purpose of `action.type` in Redux for Javascript apps.
+Rako is a declarative and traceable state container for Javascript apps.
 
 **Rako is like a Controller in MVC.**
 
