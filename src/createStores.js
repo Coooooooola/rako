@@ -1,9 +1,5 @@
 import Store from './Store'
 
-function compose(functions) {
-  return functions.reduce((a, b) => arg => a(b(arg)))
-}
-
 function applyMiddleware(middlewares) {
   return function enhancer(getState, setState, actions) {
     let _setState = setState
@@ -11,8 +7,10 @@ function applyMiddleware(middlewares) {
       return _setState(substate, extra, type, isSync)
     }
 
-    const chain = middlewares.map(middleware => middleware(getState, setStatePointer, actions))
-    _setState = compose(chain)(setState)
+    const nexts = middlewares.map(middleware => middleware(getState, setStatePointer, actions))
+    for (let i = nexts.length - 1; i >= 0; i--) {
+      _setState = nexts[i](_setState)
+    }
     return _setState
   }
 }

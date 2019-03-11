@@ -14,17 +14,17 @@ function Store(producer, enhancer) {
 
   const values = []
   const functions = []
-  for (const key of Object.keys(result)) {
-    const value = result[key]
+  for (const type of Object.keys(result)) {
+    const value = result[type]
     if (typeof value === 'function') {
       functions.push({
-        [key]: function runAction(...args) {
+        [type]: function runAction(...args) {
           let isSync = true
           let ret
           try {
             ret = value.apply({
               setState(substate, extra) {
-                return _setState(substate, extra, key, isSync)
+                return _setState(substate, extra, type, isSync)
               }
             }, args)
           } finally {
@@ -34,7 +34,7 @@ function Store(producer, enhancer) {
         }
       })
     } else {
-      values.push({[key]: value})
+      values.push({[type]: value})
     }
   }
 

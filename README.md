@@ -40,7 +40,7 @@ After you open the link of **codeSandbox** above, because **codeSandbox** doesn'
 
 #### `withMiddlewares(...middlewares: Array<function>): createStores`
 
-#### `store.subscribe(listener: function): function`
+#### `store.subscribe(listener: function): unsubscribe`
 
 #### `store.getState(): object`
 
