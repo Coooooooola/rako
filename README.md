@@ -36,18 +36,18 @@ After you open the link of **codeSandbox** above, because **codeSandbox** doesn'
 
 ## API
 
-#### `createStores(...producers: Array<function>): Array<Store>`
+`createStores(...producers: Array<function>): Array<Store>`
 
-#### `withMiddlewares(...middlewares: Array<function>): createStores`
+`withMiddlewares(...middlewares: Array<function>): createStores`
 
-#### `store.subscribe(listener: function): unsubscribe`
+`store.subscribe(listener: function): unsubscribe`
 
-#### `store.getState(): object`
+`store.getState(): object`
 
-#### `store.getActions(): object`
+`store.getActions(): object`
 
 
-#### Usage of `producer`:
+Usage of `producer`:
 
 ```js
 function producer(getState) {
@@ -77,9 +77,9 @@ function producer(getState) {
 }
 ```
 
-**`getState()` in `producer` is equivalent to `store.getState()`, but you can't `getState()` as constructing `Store`.**
+`getState()` in `producer` is equivalent to `store.getState()`, but you can't `getState()` as constructing `Store`.
 
-**`this.setState(substate: object, extra: any?)`**
+`this.setState(substate: object, extra: any?)`
 
 
 
