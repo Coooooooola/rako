@@ -1,7 +1,14 @@
+const DONT_GETSTATE = function getState() {
+  throw new Error("Don't `getState` as constructing store.")
+}
+
+const BROKEN_GETSTATE = function getState() {
+  throw new Error("`getState` was broken.")
+}
+
+
 function Store(producer, enhancer) {
-  let _getState = function getState() {
-    throw new Error("Don't `getState` as constructing store.")
-  }
+  let _getState = DONT_GETSTATE
   const result = producer(function getState() {
     return _getState()
   })
@@ -10,7 +17,7 @@ function Store(producer, enhancer) {
   }
 
 
-  let _setState
+  let next
 
   const values = []
   const functions = []
@@ -24,13 +31,13 @@ function Store(producer, enhancer) {
           try {
             ret = value.apply({
               setState(substate, extra) {
-                return _setState(substate, extra, type, isSync)
+                return next(substate, extra, type, isSync)
               }
             }, args)
           } finally {
             isSync = false
-            return ret
           }
+          return ret
         }
       })
     } else {
@@ -41,8 +48,9 @@ function Store(producer, enhancer) {
 
   let state = Object.freeze(Object.assign({}, ...values))
   const actions = Object.freeze(Object.assign({}, ...functions))
-  const listeners = []
-  let isUpdatingStore = false
+  let currentListeners = []
+  let lazyNextListeners = currentListeners
+  let callStackDepth = 0
 
 
   this.getState = function getState() {
@@ -52,22 +60,22 @@ function Store(producer, enhancer) {
     return actions
   }
   this.subscribe = function subscribe(listener) {
-    if (isUpdatingStore) {
-      throw new Error("Don't `subscribe` as setting state.")
-    }
     if (typeof listener !== 'function') {
       throw new TypeError("Expected `listener` to be a function.")
     }
-    listeners.push(listener)
+    if (callStackDepth && lazyNextListeners === currentListeners) {
+      lazyNextListeners = currentListeners.slice()
+    }
+    lazyNextListeners.push(listener)
 
     return function unsubscribe() {
-      if (isUpdatingStore) {
-        throw new Error("Don't `unsubscribe` as setting state.")
-      }
       if (!listener) {
         return
       }
-      listeners.splice(listeners.indexOf(listener), 1)
+      if (callStackDepth && lazyNextListeners === currentListeners) {
+        lazyNextListeners = currentListeners.slice()
+      }
+      lazyNextListeners.splice(lazyNextListeners.indexOf(listener), 1)
       const ret = listener
       listener = null
       return ret
@@ -75,35 +83,38 @@ function Store(producer, enhancer) {
   }
 
 
-  _setState = function updateStore(substate, extra, type, isSync) {
-    if (isUpdatingStore) {
-      throw new Error("Don't `setState` as setting state.")
-    }
+  next = function updateStore(substate, extra, type, isSync) {
     if (substate == null || typeof substate !== 'object') {
       throw new TypeError("Expected `substate` to be an object.")
     }
     state = Object.freeze(Object.assign({}, state, substate))
+    const currentState = state
 
-    isUpdatingStore = true
+    currentListeners = lazyNextListeners
+    const listeners = currentListeners
+
+    callStackDepth += 1
     try {
-      for (const listener of listeners) {
-        listener(state, extra, type, isSync)
+      for (let i = 0; i < listeners.length && currentState === state; i++) {
+        listeners[i](state, extra, type, isSync)
       }
     } finally {
-      isUpdatingStore = false
+      callStackDepth -= 1
+      if (!callStackDepth) {
+        currentListeners = lazyNextListeners
+      }
     }
   }
 
 
   if (enhancer) {
-      _getState = function getState() {
-        throw new Error("`getState` was broken.")
-      }
-    _setState = enhancer(this.getState, _setState, actions)
+    _getState = BROKEN_GETSTATE
+    next = enhancer(this.getState, next, actions)
   }
 
 
   _getState = this.getState
 }
+
 
 export default Store

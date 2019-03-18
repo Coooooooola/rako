@@ -1,6 +1,7 @@
 import Store from './Store'
 import {applyMiddleware} from './applyMiddleware'
 
+
 function _createStores(producers, middlewares) {
   if (producers.some(producer => typeof producer !== 'function')) {
     throw new TypeError("Expected every `producer` to be a function.")
