@@ -48,8 +48,8 @@ function Store(producer, enhancer) {
 
   let state = Object.freeze(Object.assign({}, ...values))
   const actions = Object.freeze(Object.assign({}, ...functions))
-  let currentListeners = []
-  let lazyNextListeners = currentListeners
+  let listeners = []
+  let hasNullInListeners = false
   let callStackDepth = 0
 
 
@@ -63,19 +63,20 @@ function Store(producer, enhancer) {
     if (typeof listener !== 'function') {
       throw new TypeError("Expected `listener` to be a function.")
     }
-    if (callStackDepth && lazyNextListeners === currentListeners) {
-      lazyNextListeners = currentListeners.slice()
-    }
-    lazyNextListeners.push(listener)
+    listeners.push(listener)
 
     return function unsubscribe() {
       if (!listener) {
         return
       }
-      if (callStackDepth && lazyNextListeners === currentListeners) {
-        lazyNextListeners = currentListeners.slice()
+      const index = listeners.lastIndexOf(listener)
+      if (callStackDepth) {
+        listeners[index] = null
+        hasNullInListeners = true
+      } else {
+        listeners.splice(index, 1)
       }
-      lazyNextListeners.splice(lazyNextListeners.indexOf(listener), 1)
+
       const ret = listener
       listener = null
       return ret
@@ -90,18 +91,18 @@ function Store(producer, enhancer) {
     state = Object.freeze(Object.assign({}, state, substate))
     const currentState = state
 
-    currentListeners = lazyNextListeners
-    const listeners = currentListeners
-
     callStackDepth += 1
     try {
-      for (let i = 0; i < listeners.length && currentState === state; i++) {
-        listeners[i](state, extra, type, isSync)
+      for (let i = 0, length = listeners.length; i < length && currentState === state; i++) {
+        if (listeners[i]) {
+          listeners[i](state, extra, type, isSync)
+        }
       }
     } finally {
       callStackDepth -= 1
-      if (!callStackDepth) {
-        currentListeners = lazyNextListeners
+      if (!callStackDepth && hasNullInListeners) {
+        listeners = listeners.filter(listener => !!listener)
+        hasNullInListeners = false
       }
     }
   }
