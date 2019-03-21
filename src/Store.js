@@ -65,11 +65,12 @@ function Store(producer, enhancer) {
     }
     listeners.push(listener)
 
+    const border = listeners.length
     return function unsubscribe() {
       if (!listener) {
         return
       }
-      const index = listeners.lastIndexOf(listener)
+      const index = listeners.lastIndexOf(listener, border)
       if (callStackDepth) {
         listeners[index] = null
         hasNullInListeners = true
